@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Money Book</title>
+	<link rel="stylesheet" type="text/css" href="mystyle.css">
+	<link
+		href="https://fonts.googleapis.com/css?family=Libre+Barcode+39+Extended+Text|Lora|PT+Sans|Ubuntu+Condensed|Fira+Code|Roboto+Condensed|Yrsa&display=swap"
+		rel="stylesheet">
+
+</head>
+
+<body>
+	<div id="root">
+		<div class="container">
+			<h1 class="fleft">Money Book</h1>
+			<div v-if="loginStatus==true">
+				<img class="fright login" src="login.jpg" style="width:150px;height:70px;" @click="showingloginModal = true"></img>
+
+				<img class="fright addNew" src="register.jpg" style="width:150px;height:70px;"  @click= "showingAddModal = true"></img>
+			</div>
+	
+			<div v-else-if="loginStatus == false">
+				<img class="fright login" src="logout.jpg" style="width:150px;height:70px;" @click="showinglogoutModal = true"> </img>
+				<img class="fright" src="yellowhouse.jpg"
+					style="width:70px;height:70px;" @click="backtohome()"> </img>
+			</div>
+
+			<div class="clear"></div>
+			<br>
+			<hr>
+			<br>
+			<p class="errorMessage" v-if="errorMessage">
+				{{ errorMessage }}
+				<button class="fright close" @click="errorMessage = '' ">X</button>
+			</p>
+			<p class="successMessage" v-if="successMessage">
+				{{ successMessage }}
+				<button class="fright close" @click="successMessage = '' ">X</button>
+			</p>
+
+			<div class='addBook' v-if="loginStatus==false && bookTable == true">
+				<button class="fright" @click="addingBookmodal= true"> Create Money Book</button>
+			</div>
+
+			<div class='addList' v-if="loginStatus==false && bookTable == false && listTable == false">
+				<button class="fright" @click="modalForlistmonth= true"> Add Month</button>
+			</div>
+
+			<div class='moneymoney' v-if="loginStatus==false && bookTable == false && listTable == true">
+				<button class="fright" @click="showAddModal = true"> Spent/Earned Money</button>
+			</div>
+
+
+
+			<!--로그인 첫 화면 테이블-->
+			<div v-if="loginStatus==false && bookTable == true && listTable == false">
+				<h2>♩ Main Page ♪&#160; Your money books! </h2>
+
+				<table class="list">
+					<tr>
+						<th>#</th>
+						<th>title</th>
+						<th>Edit</th>
+						<th> View</th>
+
+					</tr>
+					<tr v-for="book in books">
+						<td>{{ book.booknum }}</td>
+						<td>{{ book.title }}</td>
+						<td><button @click="editingBookmodal = true; selectBook(book)">Edit</button></td>
+						<td><button @click="viewingBookmodal = true; selectBook(book)">View </button> </td>
+
+					</tr>
+				</table>
+			</div>
+
+			<!--머니북 하나 고르고 달 별로 정리 돼있는 테이블-->
+			<div v-else-if="loginStatus==false && bookTable ==false && listTable==false">
+				<h2> Months of ♬ {{clickedBook.title}} ♬ </h2>
+				<table class="list">
+					<tr>
+						<th>#</th>
+						<th>Year</th>
+						<th>Month</th>
+						<th> balance</th>
+						<th>Edit</th>
+						<th> View</th>
+
+					</tr>
+					<tr v-for="listing in listings">
+						<td>{{ listing.listnum }}</td>
+						<td>{{ listing.year }}</td>
+						<td>{{ listing.month }}</td>
+						<td> ${{ listing.balance }}</td>
+						<td><button @click="editingListmodal = true; selectList(listing)">Edit</button></td>
+						<td><button @click="viewingListmodal = true; selectList(listing)">View </button> </td>
+						<!-- <td><button @click="editingBookmodal = true; selectBook(book)">Edit</button></td>
+							<td><button @click="viewingBookmodal = true; selectBook(book)">View </button> </td> -->
+
+					</tr>
+				</table>
+			</div>
+
+			<!-- 달 선택해서 지출/수익 테이블-->
+			<div v-else-if="loginStatus==false && bookTable ==false && listTable==true">
+				<h2>Money usage of  ♬ {{clickedList.month}}, {{clickedList.year}}  ♬
+				</br> Net balance: ${{ balance.balance }}
+				</h2>
+
+				<table class="list">
+					<tr>
+						<th>date</th>
+						<th>type</th>
+						<th>title</th>
+						<th>amount</th>
+						<th>category</th>
+						<th>edit</th>
+						<th>delete</th>
+					</tr>
+
+					<tr v-for='usage in usages'>
+						<td>{{ usage.date }}</td>
+						<td>{{ usage.type }}</td>
+						<td>{{ usage.title }}</td>
+						<td>{{ usage.amount }}</td>
+						<td>{{ usage.category }}</td>
+						<td><button @click="showEditModal = true; selectRecord(usage)">Edit</button></td>
+						<td><button @click="showDeleteModal = true; selectRecord(usage)">Delete</button></td>
+					</tr>
+				</table>
+				<!-- change order -->
+				<br>
+				<hr>
+				<div class="fontChange">
+					<br>
+					Order by &#160; &#160; date-descending <input type='radio' name="" value="date DESC"
+						v-model="order">
+					&#160; date-ascending <input type='radio' name="" value="date ASC" v-model="order">
+					&#160; amount <input type='radio' name="" value="amount" v-model="order">
+					&#160; title <input type='radio' name="" value="title" v-model="order">
+					<button @click="getAllRecords">change order</button>
+				</div>
+				<br>
+				<!-- change option -->
+				<div class="fontChange">
+					category: <input type="text" v-model="viewOption2">
+					<button @click="getAllRecords2(); viewOption2 = ''">categorize</button>
+					<br><br>
+					income only <input type='radio' name="" value="and type = 'income'" v-model="viewOption1"> &#160;
+					&#160;
+					expense only <input type='radio' name="" value="and type = 'expense'" v-model="viewOption1"> &#160;
+					&#160;
+					both<input type='radio' name="" value="" v-model="viewOption1">
+					<!-- <button @click="getAllRecords">reload</button> -->
+					<br> <br>
+					<button @click="getAllRecords()">reorganize</button>
+
+				</div>
+
+				<br>
+				<hr>
+				<br>
+				<div id="currency">
+
+					<h3>Currency Converter</h3> 
+					<div class="currview"> {{convertFrom}} {{amount}} = {{convertTo}} {{finalamount}} </div>
+					<br>
+					<div class="fontChange">
+						From:
+						<select v-model="convertFrom">
+							<option v-for="(a, index) in currencyfrom" v-bind:value="a.name">{{a.desc}}</option>
+						</select>
+						<input type="amount" v-model.number="amount" placeholder="Enter Amount" />
+						To:
+						<select v-model="convertTo">
+							<option v-for="(a, index) in currencyfrom" v-bind:value="a.name">{{a.desc}}</option>
+						</select><br /><br />
+					</div>
+					<br>
+					<br>
+					<br>
+					<br>
+
+				</div>
+			</div>
+
+		</div>
+
+
+
+
+
+
+
+
+
+		<!--모 달 타 입 들 모 음 집 . z i p-->
+
+		<!--modal for adding 지출 / 수익-->
+		<div class="modal" v-if="showAddModal">
+			<div class="modalContainer">
+				<div class="modalHeading">
+					<p class="fleft">Add Money Usage</p>
+					<button class="fright close" @click="showAddModal= false">X</button>
+					<div class="clear"></div>
+
+				</div>
+
+				<div class="modalContent">
+					<table class="form">
+						<tr>
+							<td>Date</td>
+							<td>:</td>
+							<td><input type='text' name="" v-model="newRecord.date"></td>
+						</tr>
+						<tr>
+							<td>Type</td>
+							<td>:</td>
+							<td>
+								income <input type='radio' name="" value="income" v-model="newRecord.type">
+								expense <input type='radio' name="" value="expense" v-model="newRecord.type">
+							</td>
+						</tr>
+						<tr>
+							<td>Title</td>
+							<td>:</td>
+							<td><input type='text' name="" v-model="newRecord.title"></td>
+						</tr>
+						<tr>
+							<td>Amount</td>
+							<td>:</td>
+							<td><input type='float' name="" v-model="newRecord.amount"></td>
+						</tr>
+						<tr>
+							<td>Category</td>
+							<td>:</td>
+							<td><input type='text' name="" v-model="newRecord.category"></td>
+						</tr>
+						<tr>
+							<td></td>
+							<td></td>
+							<td><button @click="showAddModal = false; updateBalance1(); saveRecord()">Save</button>
+							</td>
+						</tr>
+
+
+					</table>
+				</div>
+
+			</div>
+		</div>
+
+
+		<!-- modal for editing 지출 / 수익-->
+		<div class="modal" v-if="showEditModal">
+			<div class="modalContainer">
+				<div class="modalHeading">
+					<p class="fleft">Edit</p>
+					<button class="fright close" @click="showEditModal=false">X</button>
+					<div class="clear"></div>
+				</div>
+
+				<div class="modalContent">
+					<table class="form">
+						<tr>
+							<td>Date</td>
+							<td>:</td>
+							<td><input type='text' name="" v-model="clicked.date"></td>
+						</tr>
+						<tr>
+							<td>Title</td>
+							<td>:</td>
+							<td><input type='text' name="" v-model="clicked.title"></td>
+						</tr>
+						<tr>
+							<td>Category</td>
+							<td>:</td>
+							<td><input type='text' name="" v-model="clicked.category"></td>
+						</tr>
+						<tr>
+							<td></td>
+							<td></td>
+							<td><button @click="showEditModal = false; updateRecord()">Save</button>
+							</td>
+						</tr>
+					</table>
+				</div>
+
+			</div>
+		</div>
+
+
+
+		<!-- modal for deleting 지줄/수익 -->
+		<div class="modal" v-if="showDeleteModal">
+			<div class="modalContainer">
+				<div class="modalHeading">
+					<p class="fleft">Delete</p>
+					<button class="fright close" @click="showDeleteModal=false">X</button>
+					<div class="clear"></div>
+				</div>
+
+				<div class="modalContent">
+					<p>You are going to delete {{ clicked.title }}......</p>
+					<br><br><br><br><br>
+					<button @click="showDeleteModal = false; updateBalance3(); deleteRecord()">Yes</button>
+					<button @click="showDeleteModal = false">No</button>
+				</div>
+
+			</div>
+		</div>
+
+
+		<!--VIEW list Names (jump into each month-->
+		<div class="modal" id="viewList" v-if="viewingListmodal">
+			<div class="modalContainer">
+				<div class="modalHeading">
+					<p class="fleft">View</p>
+					<button class="fright close" @click="viewingListmodal= false">X</button>
+					<div class="clear"></div>
+				</div>
+				<div class="modalContent">
+					<table class="form">
+						<tr>
+							<th>open this month?</th>
+						</tr>
+						<tr>
+							<th></th>
+							<th></th>
+							<td> <button @click="viewingListmodal = false; getAllRecords(); bringBalance()">yes
+									please!</button> </td>
+						</tr>
+					</table>
+				</div>
+			</div>
+
+		</div>
+
+
+		<!--EDIT List Names-->
+		<div class="modal" id="editList" v-if="editingListmodal">
+			<div class="modalContainer">
+				<div class="modalHeading">
+					<p class="fleft">Edit List Name</p>
+					<button class="fright close" @click="editingListmodal= false">X</button>
+					<div class="clear"></div>
+				</div>
+				<div class="modalContent">
+					<table class="form">
+						<tr>
+							<th>Year</th>
+							<th> : </th>
+							<td> <input type="text" name="" v-model="clickedList.year"> </td>
+						</tr>
+						<tr>
+							<th>Month</th>
+							<th> : </th>
+							<!-- <td> <input type="text" name="" v-model="clickedList.month"> </td> -->
+							<td><select v-model="clickedList.month">
+								<option disabled value="">Please select one</option>
+								<option>January</option>
+								<option>February</option>
+								<option>March</option>
+								<option>April</option>
+								<option>May</option>
+								<option>June</option>
+								<option>July</option>
+								<option>August</option>
+								<option>September</option>
+								<option>October</option>
+								<option>November</option>
+								<option>December</option>
+							  </select></td>
+						</tr>
+						<tr>
+							<th></th>
+							<th></th>
+							<td> <button @click="editingListmodal = false; listEdit()">Edit</button> </td>
+						</tr>
+					</table>
+				</div>
+			</div>
+
+		</div>
+
+
+		<!--add Book-->
+		<div class="modal" id="addBook" v-if="addingBookmodal">
+			<div class="modalContainer">
+				<div class="modalHeading">
+					<p class="fleft">Add New Book</p>
+					<button class="fright close" @click="addingBookmodal= false">X</button>
+					<div class="clear"></div>
+				</div>
+				<div class="modalContent">
+					<table class="form">
+						<tr>
+							<th>title</th>
+							<th> : </th>
+							<td> <input type="text" name="" v-model="addBook.title"> </td>
+						</tr>
+						<tr>
+							<th></th>
+							<th></th>
+							<td> <button @click="addingBookmodal = false; bookAdd()">Save</button> </td>
+						</tr>
+					</table>
+				</div>
+			</div>
+		</div>
+
+		<!--add User - registeration-->
+		<div class="modal" id="addModal" v-if="showingAddModal">
+			<div class="modalContainer">
+				<div class="modalHeading">
+					<p class="fleft">Add New User</p>
+					<button class="fright close" @click="showingAddModal= false">X</button>
+					<div class="clear"></div>
+				</div>
+				<div class="modalContent">
+					<table class="form">
+						<tr>
+							<th>Username</th>
+							<th> : </th>
+							<td> <input type="text" name="" v-model="newUser.username"> </td>
+						</tr>
+						<tr>
+							<th>Email</th>
+							<th> : </th>
+							<td> <input type="text" name="" v-model="newUser.email"> </td>
+						</tr>
+						<tr>
+							<th>Password</th>
+							<th> : </th>
+							<td> <input type="password" name="" v-model="newUser.password"> </td>
+						</tr>
+						<tr>
+							<th></th>
+							<th></th>
+							<td> <button @click="showingAddModal = false; saveUser()">Save</button> </td>
+						</tr>
+					</table>
+				</div>
+			</div>
+		</div>
+
+		<!--login-->
+		<div class="modal" id="loginModal" v-if="showingloginModal">
+			<div class="modalContainer">
+				<div class="modalHeading">
+					<p class="fleft">Login</p>
+					<button class="fright close" @click="showingloginModal= false">X</button>
+					<div class="clear"></div>
+				</div>
+				<div class="modalContent">
+					<table class="form">
+						<tr>
+							<th>Username</th>
+							<th> : </th>
+							<td> <input type="text" name="" v-model="loginUser.username"> </td>
+						</tr>
+						<tr>
+							<th>Password</th>
+							<th> : </th>
+							<td> <input type="password" name="" v-model="loginUser.password"> </td>
+						</tr>
+						<tr>
+							<th></th>
+							<th></th>
+							<td> <button @click="showingloginModal = false; login()">Login</button> </td>
+						</tr>
+					</table>
+				</div>
+			</div>
+		</div>
+
+		<!--logout-->
+		<div class="modal" id="logoutModal" v-if="showinglogoutModal">
+			<div class="modalContainer">
+				<div class="modalHeading">
+					<p class="fleft">Login</p>
+					<button class="fright close" @click="showinglogoutModal= false">X</button>
+					<div class="clear"></div>
+				</div>
+				<div class="modalContent">
+					<table class="form">
+						<tr>
+							<th>Are you sure?</th>
+							<th></th>
+							<td> <button @click="showinglogoutModal = false; logout()">Logout</button> </td>
+						</tr>
+					</table>
+				</div>
+			</div>
+
+
+		</div>
+
+		<!--edit Book-->
+		<div class="modal" id="editBook" v-if="editingBookmodal">
+			<div class="modalContainer">
+				<div class="modalHeading">
+					<p class="fleft">Edit Book Name</p>
+					<button class="fright close" @click="editingBookmodal= false">X</button>
+					<div class="clear"></div>
+				</div>
+				<div class="modalContent">
+					<table class="form">
+						<tr>
+							<th>title</th>
+							<th> : </th>
+							<td> <input type="text" name="" v-model="clickedBook.title"> </td>
+						</tr>
+						<tr>
+							<th></th>
+							<th></th>
+							<td> <button @click="editingBookmodal = false; bookEdit()">Save</button> </td>
+						</tr>
+					</table>
+				</div>
+			</div>
+
+		</div>
+
+		<!--view Book-->
+		<div class="modal" id="viewBook" v-if="viewingBookmodal">
+			<div class="modalContainer">
+				<div class="modalHeading">
+					<p class="fleft">View</p>
+					<button class="fright close" @click="viewingBookmodal= false">X</button>
+					<div class="clear"></div>
+				</div>
+				<div class="modalContent">
+					<table class="form">
+						<tr>
+							<th>view this book?</th>
+						</tr>
+						<tr>
+							<th></th>
+							<th></th>
+							<td> <button @click="viewingBookmodal = false; bookView()">yes please!</button> </td>
+						</tr>
+					</table>
+				</div>
+			</div>
+
+		</div>
+
+
+		<!--add Month in the list-->
+		<div class="modal" id="addMonth" v-if="modalForlistmonth">
+			<div class="modalContainer">
+				<div class="modalHeading">
+					<p class="fleft">Add New Month</p>
+					<button class="fright close" @click="modalForlistmonth= false">X</button>
+					<div class="clear"></div>
+				</div>
+				<div class="modalContent">
+					<table class="form">
+						<tr>
+							<th>Year</th>
+							<th> : </th>
+							<td> <input type="text" name="" v-model="addMonth_list.year"
+									placeholder="type in as 'yyyy'">
+							</td>
+
+							<th>Month</th>
+							<!-- <th> : </th>
+							<td> <input type="text" name="" v-model="addMonth_list.month"
+								placeholder="type in as 'yyyy'">
+						</td> -->
+							<td>
+							<select v-model="addMonth_list.month">
+								<option disabled value="">Please select one</option>
+								<option>January</option>
+								<option>February</option>
+								<option>March</option>
+								<option>April</option>
+								<option>May</option>
+								<option>June</option>
+								<option>July</option>
+								<option>August</option>
+								<option>September</option>
+								<option>October</option>
+								<option>November</option>
+								<option>December</option>
+							  </select></td>
+						</tr>
+						<tr>
+							<th></th>
+							<th></th>
+							<td> <button @click="modalForlistmonth = false; listMonthAdd()">Add</button> </td>
+						</tr>
+					</table>
+				</div>
+			</div>
+		</div>
+
+		<script type="text/javascript" src="axios.js"></script>
+		<script type="text/javascript" src="vue.js"></script>
+		<script type="text/javascript" src="app.js"></script>
+
+
+</body>
+
+</html>
